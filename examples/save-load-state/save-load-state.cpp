@@ -64,6 +64,10 @@ int main(int argc, char ** argv) {
     llama_decode(ctx, batch);
     n_past += batch.n_tokens;
 
+
+    // ➜ 여기 추가: 파일 포맷으로 state.bin 저장 (llama-state-chat과 호환)
+    llama_state_save_file(ctx, "state.bin", tokens.data(), (uint32_t) tokens.size());
+
     // save state (rng, logits, embedding and kv_cache) to file
     {
         std::vector<uint8_t> state_mem(llama_state_get_size(ctx));
