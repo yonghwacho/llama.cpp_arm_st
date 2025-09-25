@@ -1,6 +1,32 @@
 #define _CRT_SECURE_NO_DEPRECATE // Disables "unsafe" warnings on Windows
 #define _USE_MATH_DEFINES // For M_PI on MSVC
+#if defined(USE_ARM_STREAMLINE)
+  #include "ggml-sl-annot.h"
 
+// C 컴파일러별 TLS 매크로
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+  #define GGML_TLS _Thread_local
+#else
+  #define GGML_TLS __thread
+#endif
+
+static inline void ggml_sl_ensure_ready(void) {
+    // 프로세스 전역: ANNOTATE_SETUP 1회
+    static int g_setup_done = 0;
+    if (!g_setup_done) {
+        SL_INIT();                 // == ANNOTATE_SETUP
+        g_setup_done = 1;
+    }
+
+    // 스레드별: 채널/그룹 네이밍 1회
+    static GGML_TLS int  s_named = 0;
+    if (!s_named) {
+        ANNOTATE_NAME_GROUP(1001, "ggml");       // 그룹 이름은 아무거나
+        ANNOTATE_NAME_CHANNEL(1, 1001, "ops");   // 채널 1을 "ops"로
+        s_named = 1;
+    }
+}
+#endif // USE_ARM_STREAMLINE
 #include "ggml-backend-impl.h"
 #include "ggml-backend.h"
 #include "traits.h"
@@ -1670,372 +1696,553 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
         return;
     }
 
+    #if defined(USE_ARM_STREAMLINE)
+        ggml_sl_ensure_ready();   // ✅ 여기서 프로세스 1회 + 스레드 1회 초기화 보장
+    #endif
     switch (tensor->op) {
         case GGML_OP_DUP:
             {
+                SL_BEGIN("DUP");
                 ggml_compute_forward_dup(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ADD:
             {
+                SL_BEGIN("ADD");
                 ggml_compute_forward_add(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ADD_ID:
             {
+                SL_BEGIN("ADD_ID");
                 ggml_compute_forward_add_id(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ADD1:
             {
+                SL_BEGIN("ADD_ADD1");
                 ggml_compute_forward_add1(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ACC:
             {
+                SL_BEGIN("ADD_ACC");
                 ggml_compute_forward_acc(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SUB:
             {
+                SL_BEGIN("SUB");
                 ggml_compute_forward_sub(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_MUL:
             {
+                SL_BEGIN("MUL");
                 ggml_compute_forward_mul(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_DIV:
             {
+                SL_BEGIN("DIV");
                 ggml_compute_forward_div(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SQR:
             {
+                SL_BEGIN("SQR");
                 ggml_compute_forward_sqr(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SQRT:
             {
+                SL_BEGIN("SQRT");
                 ggml_compute_forward_sqrt(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_LOG:
             {
+                SL_BEGIN("LOG");
                 ggml_compute_forward_log(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SIN:
             {
+                SL_BEGIN("SIN");
                 ggml_compute_forward_sin(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_COS:
             {
+                SL_BEGIN("COS");
                 ggml_compute_forward_cos(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SUM:
             {
+                SL_BEGIN("SUM");
                 ggml_compute_forward_sum(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SUM_ROWS:
             {
+                SL_BEGIN("SUM_ROWS");
                 ggml_compute_forward_sum_rows(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_MEAN:
             {
+                SL_BEGIN("MEAN");
                 ggml_compute_forward_mean(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ARGMAX:
             {
+                SL_BEGIN("ARGMAX");
                 ggml_compute_forward_argmax(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_COUNT_EQUAL:
             {
+                SL_BEGIN("EQUAL");
                 ggml_compute_forward_count_equal(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_REPEAT:
             {
+                SL_BEGIN("REPEAT");
                 ggml_compute_forward_repeat(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_REPEAT_BACK:
             {
+                SL_BEGIN("BACK");
                 ggml_compute_forward_repeat_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONCAT:
             {
+                SL_BEGIN("CONCAT");
                 ggml_compute_forward_concat(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SILU_BACK:
             {
+                SL_BEGIN("SILU_BACK");
                 ggml_compute_forward_silu_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_NORM:
             {
+                SL_BEGIN("NORM");
                 ggml_compute_forward_norm(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_RMS_NORM:
             {
+                SL_BEGIN("RMS_NORM");
                 ggml_compute_forward_rms_norm(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_RMS_NORM_BACK:
             {
+                SL_BEGIN("RMS_NORM_BACK");
                 ggml_compute_forward_rms_norm_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GROUP_NORM:
             {
+                SL_BEGIN("GROUP_NORM");
                 ggml_compute_forward_group_norm(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_L2_NORM:
             {
+                SL_BEGIN("L2_NORM");
                 ggml_compute_forward_l2_norm(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_MUL_MAT:
             {
+                SL_BEGIN("MUL_MAT");
                 ggml_compute_forward_mul_mat(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_MUL_MAT_ID:
             {
+                SL_BEGIN("MUL_MAT_ID");
                 ggml_compute_forward_mul_mat_id(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_OUT_PROD:
             {
+                SL_BEGIN("OUT_PROD");
                 ggml_compute_forward_out_prod(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SCALE:
             {
+                SL_BEGIN("SCALE");
                 ggml_compute_forward_scale(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SET:
             {
+                SL_BEGIN("SET");
                 ggml_compute_forward_set(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CPY:
             {
+                SL_BEGIN("CPY");
                 ggml_compute_forward_cpy(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONT:
             {
+                SL_BEGIN("CONT");
                 ggml_compute_forward_cont(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_RESHAPE:
             {
+                SL_BEGIN("RESHAPE");
                 ggml_compute_forward_reshape(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_VIEW:
             {
+                SL_BEGIN("VIEW");
                 ggml_compute_forward_view(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_PERMUTE:
             {
+                SL_BEGIN("PERMUTE");
                 ggml_compute_forward_permute(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_TRANSPOSE:
             {
+                SL_BEGIN("TRANSPOSE");
                 ggml_compute_forward_transpose(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GET_ROWS:
             {
+                SL_BEGIN("GET_ROWS");
                 ggml_compute_forward_get_rows(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GET_ROWS_BACK:
             {
+                SL_BEGIN("GET_ROWS_BACK");
                 ggml_compute_forward_get_rows_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SET_ROWS:
             {
+                SL_BEGIN("SET_ROWS");
                 ggml_compute_forward_set_rows(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_DIAG:
             {
+                SL_BEGIN("DIAG");
                 ggml_compute_forward_diag(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_DIAG_MASK_INF:
             {
+                SL_BEGIN("DIAG_MASK_INF");
                 ggml_compute_forward_diag_mask_inf(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_DIAG_MASK_ZERO:
             {
+                SL_BEGIN("DIAG_MASK_ZERO");
                 ggml_compute_forward_diag_mask_zero(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SOFT_MAX:
             {
+                SL_BEGIN("SOFT_MAX");
                 ggml_compute_forward_soft_max(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SOFT_MAX_BACK:
             {
+                SL_BEGIN("SOFT_MAX_BACK");
                 ggml_compute_forward_soft_max_ext_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ROPE:
             {
+                SL_BEGIN("ROPE");
                 ggml_compute_forward_rope(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ROPE_BACK:
             {
+                SL_BEGIN("ROPE_BACK");
                 ggml_compute_forward_rope_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CLAMP:
             {
+                SL_BEGIN("CLAMP");
                 ggml_compute_forward_clamp(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONV_TRANSPOSE_1D:
             {
+                SL_BEGIN("TRANSPOSE_1D");
                 ggml_compute_forward_conv_transpose_1d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_IM2COL:
             {
+                SL_BEGIN("IM2OL");
                 ggml_compute_forward_im2col(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_IM2COL_BACK:
             {
+                SL_BEGIN("IM2OL_BACK");
                 ggml_compute_forward_im2col_back_f32(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_IM2COL_3D:
             {
+                SL_BEGIN("IM2OL_3D");
                 ggml_compute_forward_im2col_3d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONV_2D:
             {
+                SL_BEGIN("CONV_2D");
                 ggml_compute_forward_conv_2d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONV_3D:
             {
+                SL_BEGIN("CONV_3D");
                 ggml_compute_forward_conv_3d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONV_2D_DW:
             {
+                SL_BEGIN("CONV_2D_DW");
                 ggml_compute_forward_conv_2d_dw(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_CONV_TRANSPOSE_2D:
             {
+                SL_BEGIN("TRANSPOSE_2D");
                 ggml_compute_forward_conv_transpose_2d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_POOL_1D:
             {
+                SL_BEGIN("POOL_1D");
                 ggml_compute_forward_pool_1d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_POOL_2D:
             {
+                SL_BEGIN("POOL_2D");
                 ggml_compute_forward_pool_2d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_POOL_2D_BACK:
             {
+                SL_BEGIN("POOL_2D_BACK");
                 ggml_compute_forward_pool_2d_back(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_UPSCALE:
             {
+                SL_BEGIN("UPSCALE");
                 ggml_compute_forward_upscale(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_PAD:
             {
+                SL_BEGIN("PAD");
                 ggml_compute_forward_pad(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_PAD_REFLECT_1D:
             {
+                SL_BEGIN("PAD_REFLECT_1D");
                 ggml_compute_forward_pad_reflect_1d(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ROLL:
             {
+                SL_BEGIN("ROLL");
                 ggml_compute_forward_roll(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ARANGE:
             {
+                SL_BEGIN("ARANGE");
                 ggml_compute_forward_arange(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_TIMESTEP_EMBEDDING:
             {
+                SL_BEGIN("TIMESTEP_EMBEDDING");
                 ggml_compute_forward_timestep_embedding(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ARGSORT:
             {
+                SL_BEGIN("AGRSORT");
                 ggml_compute_forward_argsort(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_LEAKY_RELU:
             {
+                SL_BEGIN("LEAKY_RELU");
                 ggml_compute_forward_leaky_relu(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_FLASH_ATTN_EXT:
             {
+                SL_BEGIN("FLASH_ATTN_EXT");
                 ggml_compute_forward_flash_attn_ext(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_FLASH_ATTN_BACK:
             {
+                SL_BEGIN("FLASH_ATTN_ATTN_BACK");
                 int32_t t = ggml_get_op_params_i32(tensor, 0);
                 GGML_ASSERT(t == 0 || t == 1);
                 bool masked = t != 0;
                 ggml_compute_forward_flash_attn_back(params, masked, tensor);
+                SL_END();
             } break;
         case GGML_OP_SSM_CONV:
             {
+                SL_BEGIN("SSM_CONV");
                 ggml_compute_forward_ssm_conv(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_SSM_SCAN:
             {
+                SL_BEGIN("SSM_SCAN");
                 ggml_compute_forward_ssm_scan(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_WIN_PART:
             {
+                SL_BEGIN("WIN_PART");
                 ggml_compute_forward_win_part(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_WIN_UNPART:
             {
+                SL_BEGIN("WIN_UNPART");
                 ggml_compute_forward_win_unpart(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_UNARY:
             {
+                SL_BEGIN("UNARY");
                 ggml_compute_forward_unary(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GLU:
             {
+                SL_BEGIN("GLU");
                 ggml_compute_forward_glu(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GET_REL_POS:
             {
+                SL_BEGIN("GET_REL_POS");
                 ggml_compute_forward_get_rel_pos(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_ADD_REL_POS:
             {
+                SL_BEGIN("ADD_REL_POS");
                 ggml_compute_forward_add_rel_pos(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_RWKV_WKV6:
             {
+                SL_BEGIN("RWKV_WKV6");
                 ggml_compute_forward_rwkv_wkv6(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_GATED_LINEAR_ATTN:
             {
+                SL_BEGIN("GATED_LINEAR_ATTN");
                 ggml_compute_forward_gla(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_RWKV_WKV7:
             {
+                SL_BEGIN("RWMKV_WKV7");
                 ggml_compute_forward_rwkv_wkv7(params, tensor);
+                SL_END();
             } break;
         case GGML_OP_MAP_CUSTOM1:
             {
+                SL_BEGIN("MAP_CUSTOM1");
                 ggml_compute_forward_map_custom1(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_MAP_CUSTOM2:
             {
+                SL_BEGIN("MAP_CUSTOM2");
                 ggml_compute_forward_map_custom2(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_MAP_CUSTOM3:
             {
+                SL_BEGIN("MAP_CUSTOM3");
                 ggml_compute_forward_map_custom3(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_CUSTOM:
             {
+                SL_BEGIN("CUSTOM");
                 ggml_compute_forward_custom(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_CROSS_ENTROPY_LOSS:
             {
+                SL_BEGIN("CROSS_ENTROPY_LOSS");
                 ggml_compute_forward_cross_entropy_loss(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_CROSS_ENTROPY_LOSS_BACK:
             {
+                SL_BEGIN("CROSS_ENTROPY_LOSS_BACK:");
                 ggml_compute_forward_cross_entropy_loss_back(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_OPT_STEP_ADAMW:
             {
+                SL_BEGIN("OPT_STEP_ADAMW");
                 ggml_compute_forward_opt_step_adamw(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_OPT_STEP_SGD:
             {
+                SL_BEGIN("PT_STEP_SGD");
                 ggml_compute_forward_opt_step_sgd(params, tensor);
+                SL_END();
             }
             break;
         case GGML_OP_NONE:
@@ -2046,7 +2253,7 @@ static void ggml_compute_forward(struct ggml_compute_params * params, struct ggm
             {
                 GGML_ABORT("fatal error");
             }
-    }
+    }    
 }
 
 // Android's libc implementation "bionic" does not support setting affinity
